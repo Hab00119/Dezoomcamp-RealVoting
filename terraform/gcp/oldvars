@@ -1,4 +1,4 @@
-// terraform/gcp/variables.tf
+# terraform/gcp/variables.tf
 variable "project_id" {
   description = "The GCP project ID to deploy resources"
   type        = string
@@ -37,18 +37,4 @@ variable "delete_contents_on_destroy" {
   description = "Whether to delete the contents of the dataset when destroying"
   type        = bool
   default     = false
-}
-
-// New variable for GCS staging bucket, with a sensible default
-variable "temp_bucket_name" {
-  description = "Name for the GCS bucket used as temporary staging for BigQuery writes (must be globally unique)"
-  type        = string
-  default     = "dezoomfinal-bq-staging"
-}
-
-// Location for the staging bucket (defaults to the same region)
-variable "temp_bucket_location" {
-  description = "Location for the GCS staging bucket"
-  type        = string
-  default     = "US"
 }

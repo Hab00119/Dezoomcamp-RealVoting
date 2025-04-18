@@ -12,6 +12,7 @@ make bigquery-full-setup PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dez
 STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-streaming
 #STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make submit-flink-job
 STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-batch
+STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-dashboard
 ```
 # Set up GCP resources only, your project-id can be gotten from your dashboard: mine is dezoomfinal
 ## creds file: /workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json
@@ -199,3 +200,8 @@ The streaming component uses PyFlink for real-time analysis:
 ✅ Step 2: Processing Layer (PySpark batch & PyFlink streaming)
 ⬜ Step 3: Transformation Layer with dbt
 ⬜ Step 4: Visualization with Streamlit dashboard
+
+
+#the real processing/batch/voter_analysis_with_dbt.py combines the work of spark with dbt (quick fix to meet up with deadline), the voter_analysis_real is the actual one which separates dbt work from spark's. analytic/dashboard/app_temp is also temporary which used the voter_analysis_with_dbt (app.py is meant to be the main one)
+
+#terrfaform: oldmain and oldvars (didn't create bigquery bucket) but work while the current main and variables.tf create bigquery bucket

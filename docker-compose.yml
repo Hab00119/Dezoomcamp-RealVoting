@@ -267,9 +267,11 @@ services:
       - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
     environment:
       - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-GCP}
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_PROJECT_ID=dezoomfinal
+      - GOOGLE_CLOUD_PROJECT=dezoomfinal
       - GCP_DATASET=voting_data
       - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+      - TEMP_BUCKET_NAME=${temp_bucket_name:-dezoomfinal-bq-staging}
       - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
     networks:
       - voting-network
@@ -277,7 +279,16 @@ services:
       - redpanda-1  # Updated dependency
       #- dlt-pipeline-postgres
     #command: python -m processing.batch.voter_analysis_real
-    command: spark-submit --jars /opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar /app/voter_analysis_real.py
+    #command: spark-submit --jars /opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar /app/voter_analysis_real.py
+    command: >
+      spark-submit
+        --jars /opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar
+        --conf spark.bigquery.projectId=dezoomfinal
+        --conf spark.bigquery.parentProject=dezoomfinal
+        --conf spark.bigquery.tempGcsBucket=dezoomfinal-temp
+        --conf spark.hadoop.google.cloud.auth.service.account.enable=true
+        --conf spark.hadoop.google.cloud.auth.service.account.json.keyfile=/app/dprof-dezoomfinal-b4d188529d18.json
+        /app/voter_analysis_with_dbt.py
     profiles:
       - batch
 
@@ -346,9 +357,9 @@ services:
       - "8501:8501"
     networks:
       - voting-network
-    depends_on:
-      - postgres
-    command: streamlit run /app/analytics/dashboard/app.py
+    #depends_on:
+    #  - postgres
+    command: streamlit run /app/analytics/dashboard/app_temp.py
     profiles:
       - dashboard
 
