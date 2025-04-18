@@ -1,0 +1,32 @@
+FROM apache/flink:1.17.1-scala_2.12-java11
+
+USER root
+
+# Install Python and required packages
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Update pip
+RUN pip3 install --upgrade pip
+
+# Install PyFlink and other requirements
+COPY requirements-processing.txt /requirements-processing.txt
+RUN pip3 install -r /requirements-processing.txt
+
+# Install PySpark
+RUN pip3 install pyspark==3.4.1 google-cloud-bigquery pandas psycopg2-binary
+
+# Create directory for application code
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONPATH="/opt/flink/lib:${PYTHONPATH}"
+ENV PATH="/opt/flink/bin:${PATH}"
+
+# Copy the application code
+COPY ./processing /app/processing
+
+# Default command
+CMD ["python3", "-m", "processing.streaming.vote_processor"]

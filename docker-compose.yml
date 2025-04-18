@@ -1,0 +1,399 @@
+version: '3.8'
+
+services:
+  data-generator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.generator
+    volumes:
+      - ./data_generator:/app/data_generator
+    environment:
+      - VOTERS_COUNT=1000
+      - VOTES_PER_MINUTE=100
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
+    networks:
+      - voting-network
+    depends_on:
+      - redpanda-1  # Updated dependency
+    command: python -m data_generator.voter_generator
+
+  vote-simulator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.generator
+    volumes:
+      - ./data_generator:/app/data_generator
+    environment:
+      - VOTES_PER_MINUTE=100
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
+    networks:
+      - voting-network
+    depends_on:
+      - redpanda-1  # Updated dependency
+      - data-generator
+    command: python -m data_generator.real_vote_simulator
+
+  # Redpanda service (Kafka-compatible service)
+  redpanda-1:
+    image: redpandadata/redpanda:v24.2.18
+    container_name: redpanda-1
+    command:
+      - redpanda
+      - start
+      - --smp
+      - '1'
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - '1'
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda-1:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr
+      - PLAINTEXT://0.0.0.0:28082,OUTSIDE://0.0.0.0:8082
+      - --advertise-pandaproxy-addr
+      - PLAINTEXT://redpanda-1:28082,OUTSIDE://localhost:8082
+      - --rpc-addr
+      - 0.0.0.0:33145
+      - --advertise-rpc-addr
+      - redpanda-1:33145
+      - --set
+      - redpanda.auto_create_topics_enabled=true  # Auto-create topics similar to Kafka
+      - --set
+      - redpanda.default_topic_partitions=4  # Set default partitions similar to original Kafka setup
+    ports:
+      - 8082:8082
+      - 9092:9092
+      - 28082:28082
+      - 29092:29092
+    networks:
+      - voting-network
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redpanda Console for UI
+  redpanda-console:
+    image: redpandadata/console:v2.4.3
+    container_name: redpanda-console
+    depends_on:
+      - redpanda-1
+    ports:
+      - "8086:8080"
+    environment:
+      - REDPANDA_BROKERS=redpanda-1:29092
+      - KAFKA_BROKERS=redpanda-1:29092
+    networks:
+      - voting-network
+
+  # DLT pipeline for PostgreSQL ingestion
+  dlt-pipeline-postgres:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingestion
+    volumes:
+      - ./ingestion:/app/ingestion
+      - ~/.dlt:/root/.dlt
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
+      - STORAGE_PREFERENCE=POSTGRES
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=voting_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - BATCH_SIZE=10
+      - MAX_BATCH_INTERVAL_SECONDS=100
+      - INGEST_VOTERS=true
+      - INGEST_VOTES=true
+    networks:
+      - voting-network
+    depends_on:
+      - redpanda-1  # Updated dependency
+      - postgres
+    command: python ingestion/dlt_pipeline/real_dlt.py
+    profiles:
+      - postgres
+
+  # DLT pipeline for BigQuery ingestion
+  dlt-pipeline-bigquery:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingestion
+    volumes:
+      - ./ingestion:/app/ingestion
+      - ~/.dlt:/root/.dlt
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
+      - STORAGE_PREFERENCE=GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_DATASET=voting_data
+      - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+      - BATCH_SIZE=10
+      - MAX_BATCH_INTERVAL_SECONDS=100
+      - INGEST_VOTERS=true
+      - INGEST_VOTES=true
+    networks:
+      - voting-network
+    depends_on:
+      - redpanda-1  # Updated dependency
+    command: python ingestion/dlt_pipeline/real_dlt.py
+    profiles:
+      - bigquery
+
+  # Flink Job Manager service
+  jobmanager:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.flink2
+    image: pyflink:1.16.0
+    container_name: "flink-jobmanager"
+    pull_policy: never
+    platform: "linux/amd64"
+    hostname: "jobmanager"
+    expose:
+      - "6123"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./:/opt/flink/usrlib
+      - ./keys/:/var/private/ssl/
+      - ./src/:/opt/src
+      - ./processing:/opt/processing  # Mount processing directory
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+    command: jobmanager
+    networks:
+      - voting-network
+    environment:
+      # PostgreSQL connection
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/voting_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=voting_db
+      # Redpanda connection
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092
+      # BigQuery connection
+      - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-POSTGRES}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_DATASET=voting_data
+      - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+      # Flink configurations
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        state.backend: filesystem
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        execution.checkpointing.interval: 10s
+    profiles:
+      - streaming
+
+  # Flink Task Manager service
+  taskmanager:
+    image: pyflink:1.16.0
+    container_name: "flink-taskmanager"
+    pull_policy: never
+    platform: "linux/amd64"
+    expose:
+      - "6121"
+      - "6122"
+    volumes:
+      - ./:/opt/flink/usrlib
+      - ./src/:/opt/src
+      - ./processing:/opt/processing  # Mount processing directory
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    networks:
+      - voting-network
+    environment:
+      # PostgreSQL connection
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/voting_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=voting_db
+      # Redpanda connection
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092
+      # BigQuery connection
+      - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-GCP}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_DATASET=voting_data
+      - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+      # Flink configurations
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 2
+        state.backend: filesystem
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+    profiles:
+      - streaming
+
+  # BigQuery streaming processor (alternative to PyFlink)
+  bigquery-streaming:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bigquery-streaming
+    volumes:
+      - ./processing:/app/processing
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+    environment:
+      - STORAGE_PREFERENCE=GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_DATASET=voting_data
+      - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092
+    networks:
+      - voting-network
+    depends_on:
+      - redpanda-1
+    command: python -m processing.streaming.bigquery_vote_processor
+    profiles:
+      - bigquery-streaming
+  
+  # Spark processor for batch processing
+  spark-processor:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pyspark
+    volumes:
+      - ./processing:/app/processing
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+    environment:
+      - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-GCP}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_DATASET=voting_data
+      - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
+    networks:
+      - voting-network
+    depends_on:
+      - redpanda-1  # Updated dependency
+      #- dlt-pipeline-postgres
+    #command: python -m processing.batch.voter_analysis_real
+    command: spark-submit --jars /opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar /app/voter_analysis_real.py
+    profiles:
+      - batch
+
+  # DBT for transformations
+  dbt:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dbt
+    volumes:
+      - ./transformation:/dbt
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/root/.dbt/dprof-dezoomfinal-b4d188529d18.json:ro
+    environment:
+      - DBT_PROFILES_DIR=/dbt/profiles
+      - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-GCP}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_DATASET=voting_data
+    networks:
+      - voting-network
+    depends_on:
+      - postgres
+    profiles:
+      - transform
+
+  # Kestra for orchestration
+  kestra:
+    image: kestra/kestra:latest
+    pull_policy: always
+    user: "root"
+    command: server standalone
+    volumes:
+      - kestra-data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+      - ./kestra.yml:/app/kestra.yml:ro
+    environment:
+      - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-GCP}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_DATASET=voting_data
+      - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+      - KESTRA_CONFIGURATION_FILE=/app/kestra.yml
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    networks:
+      - voting-network
+    depends_on:
+      - postgres
+    profiles:
+      - orchestration
+
+  # Streamlit dashboard
+  streamlit:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.analytics
+    volumes:
+      - ./analytics:/app/analytics
+      - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+    environment:
+      - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-GCP}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
+      - GCP_DATASET=voting_data
+      - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
+    ports:
+      - "8501:8501"
+    networks:
+      - voting-network
+    depends_on:
+      - postgres
+    command: streamlit run /app/analytics/dashboard/app.py
+    profiles:
+      - dashboard
+
+  postgres:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_MULTIPLE_DATABASES: "voting_db,kestra"
+      POSTGRES_KESTRA_USER: kestra
+      POSTGRES_KESTRA_PASSWORD: k3str4
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/postgres-init.sh
+    networks:
+      - voting-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - postgres
+
+  # pgweb - PostgreSQL web interface
+  pgweb:
+    image: sosedoff/pgweb
+    ports:
+      - "8085:8081"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/voting_db?sslmode=disable
+    networks:
+      - voting-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    profiles:
+      - postgres
+
+volumes:
+  postgres-data:
+  kestra-data:
+
+networks:
+  voting-network:
+    driver: bridge

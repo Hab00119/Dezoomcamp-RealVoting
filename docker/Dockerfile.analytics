@@ -1,0 +1,26 @@
+FROM python:3.9-slim
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y gcc libpq-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Streamlit and other dependencies
+COPY requirements-analytics.txt /requirements-analytics.txt
+RUN pip install --no-cache-dir -r /requirements-analytics.txt
+
+# Create directory for application code
+WORKDIR /app
+
+# Copy the application code
+COPY ./analytics /app/analytics
+
+# Set environment variables
+ENV PYTHONPATH=/app
+
+# Expose port for Streamlit
+EXPOSE 8501
+
+# Default command
+CMD ["streamlit", "run", "/app/analytics/dashboard/app.py"]

@@ -1,0 +1,150 @@
+# terraform/gcp/main.tf
+provider "google" {
+  project     = var.project_id
+  region      = var.region
+  credentials = file(var.credentials_file)
+}
+
+# Create BigQuery dataset
+resource "google_bigquery_dataset" "voting_dataset" {
+  dataset_id                  = var.dataset_id
+  friendly_name               = "Voting Data"
+  description                 = "Dataset for real-time voting data"
+  location                    = var.location
+  default_table_expiration_ms = null
+  delete_contents_on_destroy  = var.delete_contents_on_destroy
+
+  labels = {
+    environment = var.environment
+  }
+}
+
+# Create voters table
+resource "google_bigquery_table" "voters_table" {
+  dataset_id          = google_bigquery_dataset.voting_dataset.dataset_id
+  table_id            = "voters"
+  deletion_protection = false
+
+  schema = <<EOF
+[
+  {
+    "name": "voter_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the voter"
+  },
+  {
+    "name": "name",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Full name of the voter"
+  },
+  {
+    "name": "age",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "Age of the voter"
+  },
+  {
+    "name": "gender",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Gender of the voter"
+  },
+  {
+    "name": "state",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "State of residence"
+  },
+  {
+    "name": "county",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "County of residence"
+  },
+  {
+    "name": "registration_date",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "When the voter registered"
+  }
+]
+EOF
+
+  depends_on = [google_bigquery_dataset.voting_dataset]
+}
+
+# Create votes table
+resource "google_bigquery_table" "votes_table" {
+  dataset_id          = google_bigquery_dataset.voting_dataset.dataset_id
+  table_id            = "votes"
+  deletion_protection = false
+
+  schema = <<EOF
+[
+  {
+    "name": "vote_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the vote"
+  },
+  {
+    "name": "voter_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Reference to the voter who cast this vote"
+  },
+  {
+    "name": "candidate",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Name of the candidate voted for"
+  },
+  {
+    "name": "candidate_image",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "URL to the candidate's image"
+  },
+  {
+    "name": "timestamp",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "When the vote was cast"
+  },
+  {
+    "name": "polling_station",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Which polling station the vote was cast at"
+  }
+]
+EOF
+
+  depends_on = [google_bigquery_dataset.voting_dataset]
+}
+
+
+
+# not there:Create voters table
+resource "google_bigquery_table" "voters_table" {
+  dataset_id          = google_bigquery_dataset.voting_dataset.dataset_id
+  table_id            = "voters"
+  deletion_protection = false
+
+  #schema = file("${path.module}/voters_schema.json")
+
+  depends_on = [google_bigquery_dataset.voting_dataset]
+}
+
+# Create votes table
+resource "google_bigquery_table" "votes_table" {
+  dataset_id          = google_bigquery_dataset.voting_dataset.dataset_id
+  table_id            = "votes"
+  deletion_protection = false
+
+  #schema = file("${path.module}/vote_schema.json")
+
+  depends_on = [google_bigquery_dataset.voting_dataset]
+}

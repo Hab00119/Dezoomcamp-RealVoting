@@ -1,0 +1,6 @@
+streamlit>=1.24.0
+pandas>=1.5.3
+plotly>=5.14.1
+sqlalchemy>=2.0.15
+psycopg2-binary>=2.9.6
+google-cloud-bigquery>=3.9.0

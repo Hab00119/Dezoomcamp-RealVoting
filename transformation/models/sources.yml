@@ -1,0 +1,48 @@
+version: 2
+
+sources:
+  - name: voting_data
+    description: "Raw voting data"
+    schema: "{{ env_var('POSTGRES_DB', 'voting_db') if env_var('STORAGE_PREFERENCE') == 'POSTGRES' else env_var('GCP_DATASET', 'voting_data') }}"
+    tables:
+      - name: votes
+        description: "Raw vote events"
+        columns:
+          - name: vote_id
+            description: "Unique identifier for each vote"
+          - name: voter_id
+            description: "ID of the voter who cast this vote"
+          - name: candidate
+            description: "Name of the candidate voted for"
+          - name: timestamp
+            description: "Time the vote was recorded in the system"
+          - name: voted_at
+            description: "Time the vote was actually cast by the voter"
+          - name: precinct
+            description: "Voting precinct identifier"
+
+      - name: voters
+        description: "Voter registration information"
+        columns:
+          - name: voter_id
+            description: "Unique identifier for each voter"
+          - name: first_name
+            description: "Voter's first name"
+          - name: last_name
+            description: "Voter's last name"
+          - name: date_of_birth
+            description: "Voter's date of birth"
+          - name: gender
+            description: "Voter's gender"
+          - name: address
+            description: "Voter's street address"
+          - name: city
+            description: "Voter's city"
+          - name: state
+            description: "Voter's state"
+          - name: zipcode
+            description: "Voter's zipcode"
+          - name: registration_date
+            description: "Date when the voter registered"
+          - name: party_affiliation
+            description: "Voter's party affiliation"

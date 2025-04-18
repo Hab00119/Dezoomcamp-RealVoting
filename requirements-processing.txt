@@ -1,0 +1,7 @@
+apache-flink==1.17.1
+pyflink==1.17.1
+pyspark==3.4.1
+pandas>=1.5.3
+google-cloud-bigquery>=3.9.0
+psycopg2-binary>=2.9.6
+sqlalchemy>=2.0.15

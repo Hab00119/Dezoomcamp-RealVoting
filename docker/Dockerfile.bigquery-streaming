@@ -1,0 +1,28 @@
+# docker/Dockerfile.bigquery-streaming
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    procps \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    google-cloud-bigquery>=2.34.0 \
+    confluent-kafka>=1.9.2 \
+    python-json-logger
+
+# Copy application code
+COPY processing /app/processing
+
+# Add a health check script
+COPY docker/healthcheck.sh /healthcheck.sh
+RUN chmod +x /healthcheck.sh
+
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "/healthcheck.sh" ]
+
+# Entry point will be specified in docker-compose
+CMD ["python", "-m", "processing.streaming.bigquery_vote_processor"]

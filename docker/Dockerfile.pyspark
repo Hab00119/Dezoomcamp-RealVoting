@@ -1,0 +1,51 @@
+FROM ubuntu:22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    wget \
+    openjdk-11-jdk \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Spark 3.5.5
+RUN wget https://dlcdn.apache.org/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz \
+    && tar -xzf spark-3.5.5-bin-hadoop3.tgz -C /opt \
+    && mv /opt/spark-3.5.5-bin-hadoop3 /opt/spark \
+    && rm spark-3.5.5-bin-hadoop3.tgz
+
+# Install PySpark and dependencies
+RUN pip3 install --no-cache-dir \
+    pyspark==3.5.5 \
+    google-cloud-bigquery \
+    pandas \
+    pyarrow \
+    psycopg2-binary
+
+# Set up PySpark
+ENV PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:$PYTHONPATH
+ENV PYSPARK_PYTHON=python3
+
+# Download and install Spark BigQuery connector
+RUN wget -q https://storage.googleapis.com/spark-lib/bigquery/spark-bigquery-with-dependencies_2.12-0.28.0.jar -P ${SPARK_HOME}/jars/
+
+# Create and set workspace as the working directory
+RUN mkdir -p /app
+WORKDIR /app
+
+# Copy application code
+COPY ./processing/batch/ /app/
+
+# Expose ports for Spark UI
+EXPOSE 4040 8080 7077
+
+# Default command
+ENTRYPOINT ["spark-submit", "--jars", "/opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar", "voter_analysis_real.py"]

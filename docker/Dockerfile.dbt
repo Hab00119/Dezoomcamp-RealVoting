@@ -1,0 +1,44 @@
+FROM python:3.9-slim
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y git libpq-dev gcc && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install dbt-core and adapters
+RUN pip install --no-cache-dir dbt-core==1.5.1 dbt-postgres==1.5.1 dbt-bigquery==1.5.1
+
+# Set working directory
+WORKDIR /dbt
+
+# Initialize dbt project
+COPY ./transformation /dbt
+
+# Create profiles directory if it doesn't exist
+RUN mkdir -p /dbt/profiles
+
+# Set up a dbt profiles.yml file
+RUN echo "voting:\n\
+  outputs:\n\
+    postgres:\n\
+      type: postgres\n\
+      host: '{{ env_var(\"POSTGRES_HOST\", \"postgres\") }}'\n\
+      user: '{{ env_var(\"POSTGRES_USER\", \"postgres\") }}'\n\
+      password: '{{ env_var(\"POSTGRES_PASSWORD\", \"postgres\") }}'\n\
+      port: 5432\n\
+      dbname: '{{ env_var(\"POSTGRES_DB\", \"voting_db\") }}'\n\
+      schema: public\n\
+      threads: 4\n\
+    bigquery:\n\
+      type: bigquery\n\
+      method: service-account\n\
+      project: '{{ env_var(\"GCP_PROJECT_ID\") }}'\n\
+      dataset: '{{ env_var(\"GCP_DATASET\", \"voting_data\") }}'\n\
+      threads: 4\n\
+      keyfile: /root/.dbt/dprof-dezoomfinal-b4d188529d18.json\n\
+      timeout_seconds: 300\n\
+  target: '{{ env_var(\"STORAGE_PREFERENCE\", \"POSTGRES\") | lower }}'\n" > /dbt/profiles/profiles.yml
+
+# Default command
+CMD ["dbt", "run", "--profiles-dir", "/dbt/profiles"]
