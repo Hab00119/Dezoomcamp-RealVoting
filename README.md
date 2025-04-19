@@ -9,7 +9,7 @@ A fully containerized, real-time data pipeline built with Kafka (Redpanda), PySp
 This project demonstrates a simplified real-time data pipeline capable of:
 
 - Generating synthetic voters and casting simulated votes
-- Streaming ingestion into BigQuery or PostgreSQL using [DLT](https://github.com/iterative/dlt)
+- Streaming ingestion into BigQuery or PostgreSQL using Data Load Tool [DLT](https://dlthub.com/)
 - Performing real-time analytics using PySpark
 - Writing results into BigQuery with partitioning and clustering
 - Displaying live metrics, turnout rates, and demographic participation on a dashboard
@@ -49,7 +49,7 @@ Analytics tables written:
 
 | Component | Description |
 |----------|-------------|
-| `analytics/dashboard/app.py` | Streamlit dashboard pulling from BigQuery, displaying vote stats, regional turnout, demographics, and candidate profiles (including images) |
+| `analytics/dashboard/app_temp2.py` | Streamlit dashboard pulling from BigQuery, displaying vote stats, regional turnout, demographics, and candidate profiles (including images) |
 
 ---
 
@@ -99,22 +99,22 @@ sudo apt update && sudo apt install terraform
 
 ```bash
 make bigquery-full-setup \
-    PROJECT_ID=dezoomfinal \
-    CREDENTIALS_FILE=./dprof-dezoomfinal-b4d188529d18.json
+    PROJECT_ID=your-project-id \
+    CREDENTIALS_FILE=path-to-your-credential-file
 ```
 ### Start Analytics (PySpark)
 ```bash
 STORAGE_PREFERENCE=GCP \
-GCP_PROJECT_ID=dezoomfinal \
-CREDENTIALS_FILE=./dprof-dezoomfinal-b4d188529d18.json \
+GCP_PROJECT_ID=your-project-id \
+CREDENTIALS_FILE=path-to-your-credential-file \
 make start-batch
 ```
 
 ### Start Dashboard
 ```bash
 STORAGE_PREFERENCE=GCP \
-GCP_PROJECT_ID=dezoomfinal \
-CREDENTIALS_FILE=./dprof-dezoomfinal-b4d188529d18.json \
+GCP_PROJECT_ID=your-project-id \
+CREDENTIALS_FILE=path-to-your-credential-file \
 make start-dashboard
 ```
 
@@ -151,23 +151,23 @@ make start-dashboard
 
 ## 🏛️ Next Steps
 
-| Task                            | Status         |
-|---------------------------------|----------------|
-| Data generation + DLT ingestion | ✅ Done        |
-| PySpark batch analytics         | ✅ Done        |
-| Streamlit dashboard             | ✅ Done        |
-| Candidate image integration     | ✅ Done        |
-| dbt modeling (marts/staging)    | ⏳ In progress |
-| PostgreSQL alternative setup    | ⏳ Pending     |
-| PyFlink streaming pipeline      | ⏳ Pending     |
-| Kestra orchestration workflows  | ⏳ Pending     |
+| Task                            | Status          |
+|---------------------------------|---------------- |
+| Data generation + DLT ingestion | ✅ Done         |
+| PySpark batch analytics         | ✅ Done         |
+| Streamlit dashboard             | ✅ Done         |
+| Candidate image integration     | ✅ Done         |
+| dbt modeling (marts/staging)    | ⏳ In progress  |
+| PostgreSQL alternative setup    | ⏳ 60% done     |
+| PyFlink streaming pipeline      | ⏳ 80% done     |
+| Kestra orchestration workflows  | ⏳ 50% done     |
 
 
 ## 📊 Sample Commands (Cheat Sheet)
 
 ```bash
 # First-time setup: infra + generators + ingestion
-make bigquery-full-setup PROJECT_ID=dezoomfinal CREDENTIALS_FILE=./creds.json
+make bigquery-full-setup PROJECT_ID=your-project-id CREDENTIALS_FILE=./creds.json
 
 # Start analytics
 make start-batch
