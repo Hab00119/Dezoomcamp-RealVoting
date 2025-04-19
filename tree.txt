@@ -1,10 +1,13 @@
 .
 ├── Makefile
+├── Makefile2
+├── Makefile3
 ├── README.md
 ├── analytics
 │   └── dashboard
-│       └── app.py
-├── credentials.json
+│       ├── app.py
+│       ├── app_temp.py
+│       └── app_temp2.py
 ├── data_generator
 │   ├── __pycache__
 │   │   ├── real_vote_simulator.cpython-39.pyc
@@ -20,10 +23,12 @@
 │   ├── Dockerfile.generator
 │   ├── Dockerfile.ingestion
 │   ├── Dockerfile.processing
+│   ├── Dockerfile.pyspark
 │   ├── Dockerfile.spark
 │   ├── healthcheck.sh
 │   └── postgres-init.sh
 ├── docker-compose.yml
+├── docker-compose2222.yml
 ├── dprof-dezoomfinal-b4d188529d18.json
 ├── ingestion
 │   ├── dlt_pipeline
@@ -31,16 +36,17 @@
 │   └── kestra_workflows
 │       └── etl_pipeline.py
 ├── kestra.yml
-├── keys
 ├── maintfwithschema
 ├── makefile4
 ├── processing
 │   ├── batch
-│   │   └── voter_analysis.py
+│   │   ├── vote_analysis_final.py
+│   │   ├── voter_analysis.py
+│   │   ├── voter_analysis_real.py
+│   │   └── voter_analysis_with_dbt.py
 │   └── streaming
-│       ├── __pycache__
-│       │   └── bigquery_vote_processor.cpython-39.pyc
 │       ├── bigquery_vote_processor.py
+│       ├── vote_processor.py
 │       └── vote_processor2.py
 ├── requirements-analytics.txt
 ├── requirements-bigquery-streaming.txt
@@ -52,17 +58,16 @@
 │   ├── setup_bigquery_tables.sh
 │   ├── setup_bq_works.sh
 │   └── setup_gcp.sh
-├── src
 ├── terraform
 │   └── gcp
 │       ├── main.tf
+│       ├── oldmain
+│       ├── oldvars
 │       ├── terraform.tfstate
 │       ├── terraform.tfstate.backup
 │       ├── terraform.tfvars
 │       ├── tfplan
-│       ├── variables.tf
-│       ├── vote_schema.json
-│       └── voter_schema.json
+│       └── variables.tf
 ├── transformation
 │   ├── dbt_project.yml
 │   └── models
@@ -74,4 +79,4 @@
 │           └── stg_votes.sql
 └── tree.txt
 
-22 directories, 56 files
+18 directories, 61 files

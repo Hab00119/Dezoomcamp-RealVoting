@@ -1,212 +1,196 @@
-# Dezoomcamp-RealVoting
+# 🌟 Real-Time Voting Analytics Pipeline
 
-#Makefile2 and docker-compose222 work so far
-## Install terraform
-wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-sudo apt update && sudo apt install terraform
+A fully containerized, real-time data pipeline built with Kafka (Redpanda), PySpark, DLT, and BigQuery, visualized through a dynamic Streamlit dashboard. The system simulates real-world voting events, ingests data in real-time, processes it for analytics, and displays it live.
 
-#use
+---
+
+## 🌐 Overview
+
+This project demonstrates a simplified real-time data pipeline capable of:
+
+- Generating synthetic voters and casting simulated votes
+- Streaming ingestion into BigQuery or PostgreSQL using [DLT](https://github.com/iterative/dlt)
+- Performing real-time analytics using PySpark
+- Writing results into BigQuery with partitioning and clustering
+- Displaying live metrics, turnout rates, and demographic participation on a dashboard
+
+---
+
+## 🔹 Architecture Breakdown
+
+### 1. **Data Generation Layer**
+
+| Component | Description |
+|----------|-------------|
+| `data_generator/voter_generator.py` | Generates synthetic voters and sends them to Kafka |
+| `data_generator/real_vote_simulator.py` | Simulates votes from voters and sends them to Kafka |
+
+### 2. **Ingestion Layer**
+
+| Component | Description |
+|----------|-------------|
+| `ingestion/dlt_pipeline/real_dlt.py` | Consumes from Kafka and ingests into PostgreSQL or BigQuery using DLT |
+
+> Produces raw `voters` and `votes` tables in your destination.
+
+### 3. **Processing Layer**
+
+| Component | Description |
+|----------|-------------|
+| `processing/batch/vote_analysis_final.py` | PySpark script that reads the votes and voter data from Kafka in real-time, joins, aggregates, and writes analytics tables to BigQuery |
+
+Analytics tables written:
+- `candidate_totals`
+- `regional_turnout`
+- `hourly_trends`
+- `demographic_analysis`
+
+### 4. **Analytics Layer**
+
+| Component | Description |
+|----------|-------------|
+| `analytics/dashboard/app.py` | Streamlit dashboard pulling from BigQuery, displaying vote stats, regional turnout, demographics, and candidate profiles (including images) |
+
+---
+
+<!--## 🗂️ Workflow Diagram
+
+![Workflow Diagram](https://path.to/your-uploaded-image/workflow-diagram.png)
+
+---
+--->
+
+## 🚀 Setup Instructions
+
+### 1. Install Prerequisites
+
 ```bash
-make bigquery-full-setup PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json
-STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-streaming
-#STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make submit-flink-job
-STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-batch
-STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-dashboard
+sudo apt update
+sudo apt install make docker.io docker-compose -y
 ```
 
+### 2. Install Terraform
+```bash
+wget -O - https://apt.releases.hashicorp.com/gpg | \
+    sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+    https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+    sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+sudo apt update && sudo apt install terraform
+```
+### 3. Create GCP Service Account
+
+1. Go to the [IAM Console](https://console.cloud.google.com/iam-admin/serviceaccounts)
+2. Create a new service account (e.g., `real-voting-pipeline`)
+3. Grant these roles:
+   - BigQuery Data Editor
+   - Storage Admin
+   - BigQuery Job User
+4. Create and download a JSON key file
+5. Place it at the root of your project (e.g., `./dprof-dezoomfinal-b4d188529d18.json`)
+
+---
+
+## ⚙️ Running the Pipeline
+
+### First Time: Terraform + Data + Ingestion
+
+```bash
+make bigquery-full-setup \
+    PROJECT_ID=dezoomfinal \
+    CREDENTIALS_FILE=./dprof-dezoomfinal-b4d188529d18.json
+```
+### Start Analytics (PySpark)
+```bash
+STORAGE_PREFERENCE=GCP \
+GCP_PROJECT_ID=dezoomfinal \
+CREDENTIALS_FILE=./dprof-dezoomfinal-b4d188529d18.json \
+make start-batch
+```
+
+### Start Dashboard
+```bash
+STORAGE_PREFERENCE=GCP \
+GCP_PROJECT_ID=dezoomfinal \
+CREDENTIALS_FILE=./dprof-dezoomfinal-b4d188529d18.json \
+make start-dashboard
+```
+
+## 📂️ Project Structure
+
+
+## 🚧 Components In Use
+
+| Layer         | Tools                           |
+|---------------|---------------------------------|
+| Messaging     | Kafka (via Redpanda)            |
+| Ingestion     | DLT (Kafka ➔ BigQuery/Postgres) |
+| Processing    | PySpark (batch analytics)       |
+| Visualization | Streamlit + Plotly              |
+| Infra         | Docker + Terraform              |
+
+
+## 📊 Analytics Tables
+
+| Table Name           | Description                                 |
+|----------------------|---------------------------------------------|
+| demographic_analysis | Age, gender, and state participation stats  |
+| candidate_totals     | Vote count and percentage by candidate      |
+| regional_turnout     | Eligible vs. actual voters per region/state |
+| hourly_trends        | Voting activity aggregated by hour          |
+
+## 🌟 Highlights
+
+- Full local simulation of a national voting system  
+- Real-time ingestion & analytics with visual feedback  
+- Efficient BigQuery writing with partitioning/clustering  
+- Custom dashboard with image-enhanced candidate display  
+
+
+## 🏛️ Next Steps
+
+| Task                            | Status         |
+|---------------------------------|----------------|
+| Data generation + DLT ingestion | ✅ Done        |
+| PySpark batch analytics         | ✅ Done        |
+| Streamlit dashboard             | ✅ Done        |
+| Candidate image integration     | ✅ Done        |
+| dbt modeling (marts/staging)    | ⏳ In progress |
+| PostgreSQL alternative setup    | ⏳ Pending     |
+| PyFlink streaming pipeline      | ⏳ Pending     |
+| Kestra orchestration workflows  | ⏳ Pending     |
+
+
+## 📊 Sample Commands (Cheat Sheet)
+
+```bash
+# First-time setup: infra + generators + ingestion
+make bigquery-full-setup PROJECT_ID=dezoomfinal CREDENTIALS_FILE=./creds.json
+
+# Start analytics
+make start-batch
+
+# Start Streamlit dashboard
+make start-dashboard
+
+# Manually trigger Spark processor
 docker-compose build spark-processor
 docker-compose up spark-processor
-
-
-# Set up GCP resources only, your project-id can be gotten from your dashboard: mine is dezoomfinal
-## creds file: /workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json
-make setup-gcp PROJECT_ID=your-project-id CREDENTIALS_FILE=./path/to/credentials.json
-
-# Set up GCP and start everything in one command (I have been using this)
-make bigquery-full-setup PROJECT_ID=your-project-id CREDENTIALS_FILE=./path/to/credentials.json
-make bigquery-full-setup PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json
-
-# If you've already set up GCP, just start the services
-make up-bigquery
-
-
-## Streaming job with pyflink
-check content
-```bash
-docker-compose --profile streaming exec jobmanager ls -la /opt/processing/streaming/
 ```
 
-Run the start-streaming command:
-```bash
-STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=your-project-id make start-streaming
-```
-
-STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-streaming
-
-If you want to manually submit the job without modifying the Makefile, you can run:
-```bash
-STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal docker-compose --profile streaming exec jobmanager flink run -py /opt/processing/streaming/vote_processor2.py
-```
-
-# Real-time Voting Data Engineering Project
-
-This project implements a comprehensive data engineering pipeline for processing and analyzing voting data in real-time. The system captures voter registration data and voting events, processes them through batch and streaming components, and makes the analyzed results available for visualization.
-
-## Architecture
-
-The system consists of these main components:
-
-1. **Data Generation**: Kafka producers creating synthetic voter data and vote events
-2. **Ingestion**: DLT pipeline consuming from Kafka and loading to PostgreSQL/BigQuery
-3. **Storage**: PostgreSQL and GCP (BigQuery/Cloud Storage)
-4. **Processing**: PySpark (batch) and PyFlink (streaming) components
-5. **Transformation**: dbt modeling layer
-6. **Analytics & Dashboard**: Streamlit visualization
-
-## Prerequisites
-
-- Docker and Docker Compose
-- Google Cloud Platform account with BigQuery enabled
-- Terraform
-- Make
-
-## Setup
-
-1. Create a GCP service account with BigQuery and Storage permissions
-2. Download the service account key file as `credentials.json` and place it in the project root
-3. Update the `terraform/gcp/terraform.tfvars` file with your GCP project ID
-4. Run setup:
+close all docker services using:
 
 ```bash
-make setup
+docker rm -f $(docker ps -aq)
+docker rmi $(docker images -aq)
 ```
 
-## Project Structure
+## 🚫 Legal
 
-```
-├── Makefile                      # Project management commands
-├── README.md                     # This file
-├── credentials.json              # GCP credentials (not included in repo)
-├── data_generator                # Generates synthetic voting data
-│   ├── real_vote_simulator.py    # Voting events generator
-│   └── voter_generator.py        # Voter registration data generator
-├── docker                        # Docker configuration files
-│   ├── Dockerfile.generator      # Data generator container
-│   ├── Dockerfile.ingestion      # DLT ingestion container
-│   ├── Dockerfile.flink          # Flink processor container
-│   └── postgres-init.sh          # PostgreSQL initialization script
-├── docker-compose.yml            # Container orchestration
-├── ingestion                     # Data ingestion components
-│   └── dlt_pipeline              # DLT pipeline configuration
-│       └── real_dlt.py           # DLT pipeline implementation
-├── processing                    # Data processing components
-│   ├── batch                     # PySpark batch processing
-│   │   ├── spark_batch_processor.py  # Batch processor for historical data
-│   │   └── spark_utils.py        # Utility functions for Spark
-│   └── streaming                 # PyFlink streaming processing
-│       ├── flink_streaming_processor.py  # Real-time processor
-│       └── flink_utils.py        # Utility functions for Flink
-├── requirements.txt              # Python dependencies
-├── scripts                       # Utility scripts
-│   └── setup_gcp.sh              # GCP setup script
-└── terraform                     # Infrastructure as code
-    └── gcp                       # GCP resource definitions
-        ├── main.tf               # Terraform main configuration
-        ├── variables.tf          # Terraform variables
-        ├── terraform.tfvars      # Variable values (not in repo)
-        ├── vote_schema.json      # Vote table schema
-        └── voter_schema.json     # Voter table schema
-```
+This project is for educational purposes only. Do not upload real personal data into this pipeline.
 
-## Usage
+## 🚀 Credits
 
-### Start the System
-
-```bash
-make start
-```
-
-### Stop the System
-
-```bash
-make stop
-```
-
-### View Logs
-
-```bash
-make logs
-```
-
-### Manually Run Processing Components
-
-Run the batch processor:
-```bash
-make run-spark
-```
-
-Run the streaming processor:
-```bash
-make run-flink
-```
-
-### Clean Up
-
-Remove all containers and volumes:
-```bash
-make clean
-```
-
-Remove processed data for re-running:
-```bash
-make clean-processed-data
-```
-
-Destroy GCP resources:
-```bash
-make tf-destroy
-```
-
-## Data Flow
-
-1. Data generator produces synthetic voter and vote data to Kafka topics
-2. DLT pipeline consumes from Kafka and loads data to PostgreSQL and BigQuery
-3. The processing layer consists of:
-   - PySpark batch processing for historical analysis
-   - PyFlink streaming processing for real-time analytics
-4. Results are stored in:
-   - BigQuery tables for batch results
-   - Kafka topics and Redis for real-time results
-
-## Processing Layer
-
-### Batch Processing (PySpark)
-
-The batch processing component uses PySpark to analyze historical voting data:
-
-- Voter turnout statistics (overall, by age group, by region)
-- Hourly and daily trends analysis
-- Regional voting patterns
-- Handling of late-arriving data with watermarking
-
-### Streaming Processing (PyFlink)
-
-The streaming component uses PyFlink for real-time analysis:
-
-- Real-time vote counting by candidate
-- Fraud detection (duplicate votes)
-- Anomaly detection (unusual voting patterns)
-- Results pushed to Kafka topics and Redis cache
-
-## Next Steps
-
-✅ Step 1: Data Generation and Ingestion
-✅ Step 2: Processing Layer (PySpark batch & PyFlink streaming)
-⬜ Step 3: Transformation Layer with dbt
-⬜ Step 4: Visualization with Streamlit dashboard
-
-
-#the real processing/batch/voter_analysis_with_dbt.py combines the work of spark with dbt (quick fix to meet up with deadline), the voter_analysis_real is the actual one which separates dbt work from spark's. analytic/dashboard/app_temp is also temporary which used the voter_analysis_with_dbt (app.py is meant to be the main one)
-
-#terrfaform: oldmain and oldvars (didn't create bigquery bucket) but work while the current main and variables.tf create bigquery bucket
+Built with ❤️ for the DataTalksClub Dezoomcamp Final Project by @hab00119.
