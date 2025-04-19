@@ -51,9 +51,15 @@ Analytics tables written:
 |----------|-------------|
 | `analytics/dashboard/app_temp2.py` | Streamlit dashboard pulling from BigQuery, displaying vote stats, regional turnout, demographics, and candidate profiles (including images) |
 
+### 🖼️ Dashboard Preview
+
+![Real-Time Voting Dashboard](assets/dashboard.png)
+
+
+<!--
 ---
 
-<!--## 🗂️ Workflow Diagram
+## 🗂️ Workflow Diagram
 
 ![Workflow Diagram](https://path.to/your-uploaded-image/workflow-diagram.png)
 
