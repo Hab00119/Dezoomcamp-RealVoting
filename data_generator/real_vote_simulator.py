@@ -51,7 +51,7 @@ voter_thread.daemon = True
 voter_thread.start()
 
 # Configuration
-VOTES_PER_MINUTE = int(os.environ.get('VOTES_PER_MINUTE', 100))
+VOTES_PER_MINUTE = int(os.environ.get('VOTES_PER_MINUTE', 250))
 
 # Fetch candidate images from RandomUser API
 def fetch_candidate_images(count=4):

@@ -133,8 +133,8 @@ class DLTPipeline:
         self.topic = os.environ.get(f'KAFKA_{self.topic_type}_TOPIC', self.topic_type.lower())
         
         # Batch configuration
-        self.batch_size = int(os.environ.get('BATCH_SIZE', '10'))
-        self.max_batch_interval_seconds = int(os.environ.get('MAX_BATCH_INTERVAL_SECONDS', '100'))
+        self.batch_size = int(os.environ.get('BATCH_SIZE', '1000'))
+        self.max_batch_interval_seconds = int(os.environ.get('MAX_BATCH_INTERVAL_SECONDS', '500')) #flush at even if records not up to batch size
         
     def create_consumer(self, group_id_prefix):
         """Create Kafka consumer for the pipeline's topic"""

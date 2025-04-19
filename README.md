@@ -14,6 +14,11 @@ STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/D
 STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-batch
 STORAGE_PREFERENCE=GCP GCP_PROJECT_ID=dezoomfinal CREDENTIALS_FILE=/workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json make start-dashboard
 ```
+
+docker-compose build spark-processor
+docker-compose up spark-processor
+
+
 # Set up GCP resources only, your project-id can be gotten from your dashboard: mine is dezoomfinal
 ## creds file: /workspaces/Dezoomcamp-RealVoting/dprof-dezoomfinal-b4d188529d18.json
 make setup-gcp PROJECT_ID=your-project-id CREDENTIALS_FILE=./path/to/credentials.json

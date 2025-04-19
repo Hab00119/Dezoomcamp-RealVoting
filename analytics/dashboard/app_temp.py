@@ -6,6 +6,7 @@ import os
 import sqlalchemy
 from google.cloud import bigquery
 from datetime import datetime, timedelta
+from google.oauth2 import service_account
 
 # Configure page
 st.set_page_config(
@@ -65,9 +66,11 @@ def get_data():
         
     else:
         # BigQuery connection
-        client = bigquery.Client()
         project_id = os.environ.get("GCP_PROJECT_ID", "dezoomfinal")
         dataset = os.environ.get("GCP_DATASET", "voting_data")
+        credentials_path = os.environ.get("GCP_CREDENTIALS_PATH", "/app/dprof-dezoomfinal-b4d188529d18.json")
+        credentials = service_account.Credentials.from_service_account_file(credentials_path)
+        client = bigquery.Client(credentials=credentials, project=project_id)
         
         # Get vote statistics
         vote_stats_query = f"""

@@ -9,7 +9,7 @@ services:
       - ./data_generator:/app/data_generator
     environment:
       - VOTERS_COUNT=1000
-      - VOTES_PER_MINUTE=100
+      - VOTES_PER_MINUTE=500
       - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
     networks:
       - voting-network
@@ -24,7 +24,7 @@ services:
     volumes:
       - ./data_generator:/app/data_generator
     environment:
-      - VOTES_PER_MINUTE=100
+      - VOTES_PER_MINUTE=500
       - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:29092  # Updated to use Redpanda
     networks:
       - voting-network
@@ -106,8 +106,8 @@ services:
       - POSTGRES_DB=voting_db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - BATCH_SIZE=10
-      - MAX_BATCH_INTERVAL_SECONDS=100
+      - BATCH_SIZE=1000
+      - MAX_BATCH_INTERVAL_SECONDS=500
       - INGEST_VOTERS=true
       - INGEST_VOTES=true
     networks:
@@ -134,8 +134,8 @@ services:
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
       - GCP_DATASET=voting_data
       - GCP_CREDENTIALS_PATH=/app/dprof-dezoomfinal-b4d188529d18.json
-      - BATCH_SIZE=10
-      - MAX_BATCH_INTERVAL_SECONDS=100
+      - BATCH_SIZE=1000
+      - MAX_BATCH_INTERVAL_SECONDS=500
       - INGEST_VOTERS=true
       - INGEST_VOTES=true
     networks:
@@ -280,6 +280,16 @@ services:
       #- dlt-pipeline-postgres
     #command: python -m processing.batch.voter_analysis_real
     #command: spark-submit --jars /opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar /app/voter_analysis_real.py
+    # command: >
+    #   spark-submit
+    #     --jars /opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar
+    #     --conf spark.bigquery.projectId=dezoomfinal
+    #     --conf spark.bigquery.parentProject=dezoomfinal
+    #     --conf spark.bigquery.tempGcsBucket=dezoomfinal-temp
+    #     --conf spark.hadoop.google.cloud.auth.service.account.enable=true
+    #     --conf spark.hadoop.google.cloud.auth.service.account.json.keyfile=/app/dprof-dezoomfinal-b4d188529d18.json
+    #     /app/voter_analysis_with_dbt.py
+
     command: >
       spark-submit
         --jars /opt/spark/jars/spark-bigquery-with-dependencies_2.12-0.28.0.jar
@@ -288,7 +298,7 @@ services:
         --conf spark.bigquery.tempGcsBucket=dezoomfinal-temp
         --conf spark.hadoop.google.cloud.auth.service.account.enable=true
         --conf spark.hadoop.google.cloud.auth.service.account.json.keyfile=/app/dprof-dezoomfinal-b4d188529d18.json
-        /app/voter_analysis_with_dbt.py
+        /app/vote_analysis_final.py
     profiles:
       - batch
 
@@ -348,6 +358,7 @@ services:
     volumes:
       - ./analytics:/app/analytics
       - ${GCP_CREDENTIALS_PATH:-./dprof-dezoomfinal-b4d188529d18.json}:/app/dprof-dezoomfinal-b4d188529d18.json:ro
+      #- ~/.config/gcloud/application_default_credentials.json:/app/dprof-dezoomfinal-b4d188529d18.json:ro
     environment:
       - STORAGE_PREFERENCE=${STORAGE_PREFERENCE:-GCP}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID:-dezoomfinal}
@@ -359,7 +370,7 @@ services:
       - voting-network
     #depends_on:
     #  - postgres
-    command: streamlit run /app/analytics/dashboard/app_temp.py
+    command: streamlit run /app/analytics/dashboard/app_temp2.py
     profiles:
       - dashboard
 
