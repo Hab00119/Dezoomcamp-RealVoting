@@ -123,7 +123,7 @@ GCP_PROJECT_ID=your-project-id \
 CREDENTIALS_FILE=path-to-your-credential-file \
 make start-dashboard
 ```
-
+The dashboard should be accessible at port 8501
 ## 📂️ Project Structure
 
 
